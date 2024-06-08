@@ -1,0 +1,38 @@
+{
+  "name": "docpdf",
+  "version": "1.0.0",
+  "description": "A simple solution for generating PDF documentation for a given project.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha tests/**/*.test.js",
+    "start": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/floor/docpdf.git"
+  },
+  "keywords": [
+    "pdf",
+    "documentation",
+    "generator"
+  ],
+  "author": "DrJones",
+  "license": "MIT",
+  "dependencies": {
+    "pdfkit": "^0.12.1"
+  },
+  "devDependencies": {
+    "mocha": "^8.4.0"
+  },
+  "bugs": {
+    "url": "https://github.com/floor/docpdf/issues"
+  },
+  "homepage": "https://github.com/floor/docpdf#readme",
+  "bin": {
+    "docpdf": "bin/docpdf.js"
+  },
+  "directories": {
+    "test": "tests"
+  }
+}

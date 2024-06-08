@@ -1,8 +1,8 @@
-import generatePDF from './generatePDF.js'
+import generate from './generate.js'
 
 const main = () => {
-  const projectPath = '../../../../' // Path to the project
-  generatePDF(projectPath)
+  const projectPath = '../../../../'
+  generate(projectPath)
 }
 
 main()

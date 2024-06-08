@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import generatePDF from '../src/generatePDF.js'
+import generate from '../src/generate.js'
 import path from 'path'
 import fs from 'fs'
 
@@ -13,4 +13,4 @@ if (!fs.existsSync(path.join(projectPath, 'dist'))) {
   fs.mkdirSync(path.join(projectPath, 'dist'))
 }
 
-generatePDF(projectPath, outputPath)
+generate(projectPath, outputPath)

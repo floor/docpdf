@@ -1,16 +1,16 @@
 import fs from 'fs'
 import path from 'path'
 
-export const getFiles = (dir, fileTree = {}) => {
+export const getFiles = (dir, fileTree = {}, rootDir = dir) => {
   const files = fs.readdirSync(dir)
 
   files.forEach(file => {
     const filePath = path.join(dir, file)
-    const relativePath = path.relative(dir, filePath)
+    const relativePath = path.relative(rootDir, filePath) // Utiliser rootDir pour générer des chemins relatifs corrects
 
     if (fs.statSync(filePath).isDirectory()) {
       if (file !== 'node_modules' && file !== 'dist' && file !== '.git' && file !== '.gitlab' && file !== 'config' && file !== 'log' && file !== '.DS_Store') {
-        fileTree[file] = getFiles(filePath, fileTree[file] || {})
+        fileTree[file] = getFiles(filePath, fileTree[file] || {}, rootDir)
       }
     } else {
       const fileSizeInBytes = fs.statSync(filePath).size

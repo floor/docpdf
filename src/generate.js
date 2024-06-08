@@ -1,19 +1,29 @@
 import { getFiles, countFiles } from './utils/file.js'
 import { generateTOC } from './utils/toc.js'
 import { addFilesToPDF } from './utils/pdf.js'
+import { addTitlePage } from './utils/title.js' // New import for title page
 import PDFDocument from 'pdfkit'
 import progress from './utils/progress.js'
 import fs from 'fs'
+import path from 'path'
 
-const generatePDF = (projectPath, outputPath) => {
+const generate = (projectPath, outputPath) => {
+  const packageJsonPath = path.join(projectPath, 'package.json')
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+  const projectName = packageJson.name
+  const projectDescription = packageJson.description
+
   const fileTree = getFiles(projectPath)
   const totalCount = countFiles(fileTree)
 
   const doc = new PDFDocument()
   doc.pipe(fs.createWriteStream(outputPath))
 
-  const currentCount = 0
   const startTime = Date.now()
+  let currentCount = 0
+
+  // Add title page
+  addTitlePage(doc, projectName, projectDescription)
 
   // Generate Table of Contents
   doc.fontSize(20).text('Table of Contents', { underline: true })
@@ -21,7 +31,7 @@ const generatePDF = (projectPath, outputPath) => {
 
   doc.addPage()
 
-  addFilesToPDF(doc, fileTree, projectPath, currentCount, totalCount, startTime)
+  currentCount = addFilesToPDF(doc, fileTree, projectPath, currentCount, totalCount, startTime)
 
   doc.end()
 
@@ -29,4 +39,4 @@ const generatePDF = (projectPath, outputPath) => {
   progress(null, totalCount, startTime, '')
 }
 
-export default generatePDF
+export default generate

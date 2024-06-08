@@ -6,7 +6,7 @@ export const getFiles = (dir, fileTree = {}, rootDir = dir) => {
 
   files.forEach(file => {
     const filePath = path.join(dir, file)
-    const relativePath = path.relative(rootDir, filePath) // Utiliser rootDir pour générer des chemins relatifs corrects
+    const relativePath = path.relative(rootDir, filePath) // Use rootDir to generate correct relative paths
 
     if (fs.statSync(filePath).isDirectory()) {
       if (file !== 'node_modules' && file !== 'dist' && file !== '.git' && file !== '.gitlab' && file !== 'config' && file !== 'log' && file !== '.DS_Store') {

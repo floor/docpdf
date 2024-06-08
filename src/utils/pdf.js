@@ -8,7 +8,7 @@ const addFilesToPDF = (doc, fileTree, projectPath, currentCount, totalCount, sta
     if (typeof fileTree[key] === 'object' && !fileTree[key].path) { // It's a directory
       const currentNumbering = numbering ? `${numbering}.${index}` : `${index}`
       doc.fontSize(14).text(`${currentNumbering} ${key}/`, { destination: `${currentNumbering} ${key}/` })
-      addFilesToPDF(doc, fileTree[key], projectPath, currentCount, totalCount, startTime, currentNumbering)
+      currentCount = addFilesToPDF(doc, fileTree[key], projectPath, currentCount, totalCount, startTime, currentNumbering)
       index++
     } else if (fileTree[key].path) { // It's a file
       const file = path.join(projectPath, fileTree[key].path)
@@ -32,6 +32,7 @@ const addFilesToPDF = (doc, fileTree, projectPath, currentCount, totalCount, sta
       }
     }
   })
+  return currentCount
 }
 
 export { addFilesToPDF }

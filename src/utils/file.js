@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import ignore from 'ignore'
 
+let refPath = ''
+let mainIg = null
 const getGitignorePatterns = (dir) => {
   const gitignorePath = path.join(dir, '.gitignore')
   if (!fs.existsSync(gitignorePath)) {
@@ -12,13 +14,24 @@ const getGitignorePatterns = (dir) => {
   return gitignoreContent.split('\n').filter(pattern => pattern.trim() !== '' && !pattern.startsWith('#'))
 }
 
-const getFiles = (dir, fileTree = {}, rootDir = dir, ig = ignore()) => {
+const getFiles = (dir, fileTree = {}, rootDir = dir, ig = ignore(), level = 0) => {
   // Read .gitignore patterns for the current directory
   const gitignorePatterns = getGitignorePatterns(dir)
-  ig.add(gitignorePatterns)
+
+  if (gitignorePatterns.length > 1) {
+    // if there is a .gitignore define the refPath
+    // console.log(gitignorePatterns)
+    refPath = path.relative(rootDir, dir)
+    ig = ignore()
+    ig.add(gitignorePatterns)
+
+    ig.add('.*')
+
+    if (!mainIg) mainIg = ig
+  }
 
   // Debugging: Log patterns being added
-  console.log(`Applying .gitignore patterns from ${dir}:`, gitignorePatterns)
+  // console.log(`Applying .gitignore patterns from ${dir}:`, gitignorePatterns)
 
   const files = fs.readdirSync(dir)
 
@@ -26,14 +39,24 @@ const getFiles = (dir, fileTree = {}, rootDir = dir, ig = ignore()) => {
     const filePath = path.join(dir, file)
     const relativePath = path.relative(rootDir, filePath)
 
-    // Check if the relative path should be ignored
-    if (ig.ignores(file)) {
-      // Debugging: Log ignored paths
-      console.log(`Ignoring ${relativePath}`)
+    let pattern = path.relative(refPath, relativePath)
+
+    if (pattern.startsWith('../')) {
+      ig = mainIg
+      refPath = ''
+      pattern = relativePath
+    }
+
+    // if (level < 2) { console.log('pattern', pattern) }
+
+    // check if the pattern path should be ignored
+    if (ig.ignores(pattern)) {
+      // if (level < 2) { console.log('-- ignore', pattern) }
       return
     }
 
     if (fs.statSync(filePath).isDirectory()) {
+      level = level++
       fileTree[file] = getFiles(filePath, fileTree[file] || {}, rootDir, ig)
     } else {
       const fileSizeInBytes = fs.statSync(filePath).size

@@ -4,6 +4,7 @@ import ignore from 'ignore'
 
 let refPath = ''
 let mainIg = null
+
 const getGitignorePatterns = (dir) => {
   const gitignorePath = path.join(dir, '.gitignore')
   if (!fs.existsSync(gitignorePath)) {
@@ -24,8 +25,7 @@ const getFiles = (dir, fileTree = {}, rootDir = dir, ig = ignore(), level = 0) =
     refPath = path.relative(rootDir, dir)
     ig = ignore()
     ig.add(gitignorePatterns)
-
-    ig.add('.*')
+    ig.add('.*') // Ignore dot files and folders
 
     if (!mainIg) mainIg = ig
   }
@@ -49,15 +49,14 @@ const getFiles = (dir, fileTree = {}, rootDir = dir, ig = ignore(), level = 0) =
 
     // if (level < 2) { console.log('pattern', pattern) }
 
-    // check if the pattern path should be ignored
+    // Check if the pattern path should be ignored
     if (ig.ignores(pattern)) {
       // if (level < 2) { console.log('-- ignore', pattern) }
       return
     }
 
     if (fs.statSync(filePath).isDirectory()) {
-      level = level++
-      fileTree[file] = getFiles(filePath, fileTree[file] || {}, rootDir, ig)
+      fileTree[file] = getFiles(filePath, fileTree[file] || {}, rootDir, ig, level + 1)
     } else {
       const fileSizeInBytes = fs.statSync(filePath).size
       const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2)

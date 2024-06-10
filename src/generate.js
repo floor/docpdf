@@ -1,19 +1,26 @@
-import { getFiles, countFiles } from './utils/file.js'
+import { getFiles, countFiles } from './utils/files.js'
 import { generateTOC } from './utils/toc.js'
 import { addFilesToPDF } from './utils/pdf.js'
-import { addTitlePage } from './utils/title.js' // New import for title page
+import { addTitlePage } from './utils/title.js'
 import PDFDocument from 'pdfkit'
 import progress from './utils/progress.js'
 import fs from 'fs'
 import path from 'path'
 
-const generate = (projectPath, outputPath) => {
+/**
+ * Generates a PDF document for a project, including a title page, table of contents, and file contents.
+ *
+ * @param {string} projectPath - The path to the project directory.
+ * @param {string} outputPath - The path where the generated PDF will be saved.
+ * @param {string} gitignoreFileName - The name of the .gitignore file to use.
+ */
+const generate = (projectPath, outputPath, gitignoreFileName = '.gitignore') => {
   const packageJsonPath = path.join(projectPath, 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const projectName = packageJson.name
   const projectDescription = packageJson.description
 
-  const fileTree = getFiles(projectPath)
+  const fileTree = getFiles(projectPath, {}, projectPath, gitignoreFileName)
   const totalCount = countFiles(fileTree)
 
   const doc = new PDFDocument()
@@ -31,6 +38,7 @@ const generate = (projectPath, outputPath) => {
 
   doc.addPage()
 
+  // Add files to PDF
   currentCount = addFilesToPDF(doc, fileTree, projectPath, currentCount, totalCount, startTime)
 
   doc.end()

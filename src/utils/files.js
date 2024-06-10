@@ -8,27 +8,34 @@ import { getGitignorePatterns } from './pattern.js'
  * @param {string} dir - Directory to process.
  * @param {Object} fileTree - Object to store file structure.
  * @param {string} rootDir - Root directory for relative paths.
+ * @param {string} gitignoreFileName - The name of the .gitignore file to use.
  * @param {Array} ignoreStack - Stack to maintain ignore instances for directory levels.
  * @param {Set} processedDirs - Set to track processed directories.
- * @param {string} gitignoreFileName - The name of the .gitignore file to use.
  * @returns {Object} - Object representing the file structure.
  */
-const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitignore', ignoreStack = [ignore()], processedDirs = new Set()) => {
-  // console.log(`Processing directory: ${dir}`)
+const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitignore', ignoreStack = [], processedDirs = new Set()) => {
+  if (ignoreStack.length === 0) {
+    // Initialize the ignore stack with patterns from the root directory
+    const rootGitignorePatterns = getGitignorePatterns(rootDir, gitignoreFileName)
+    ignoreStack.push(ignore().add(rootGitignorePatterns).add('.*')) // Ignore dot files and folders
+  }
 
   if (processedDirs.has(dir)) {
-    // console.log(`Already processed directory: ${dir}`)
     return fileTree
   }
   processedDirs.add(dir)
 
+  const currentIgnore = ignoreStack[ignoreStack.length - 1]
+
+  // Load .gitignore patterns from the current directory and add them to the current ignore instance
   const gitignorePatterns = getGitignorePatterns(dir, gitignoreFileName)
   if (gitignorePatterns.length > 0) {
-    const newIgnore = ignore().add(gitignorePatterns).add('.*')
+    const newIgnore = ignore().add(currentIgnore._rules).add(gitignorePatterns)
     ignoreStack.push(newIgnore)
+  } else {
+    ignoreStack.push(currentIgnore)
   }
 
-  const currentIgnore = ignoreStack[ignoreStack.length - 1]
   const files = fs.readdirSync(dir)
 
   files.forEach(file => {
@@ -36,7 +43,6 @@ const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitig
     const relativePath = path.relative(rootDir, filePath)
 
     if (currentIgnore.ignores(relativePath)) {
-      // console.log(`Ignoring file: ${relativePath}`)
       return
     }
 
@@ -50,9 +56,7 @@ const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitig
     }
   })
 
-  if (gitignorePatterns.length > 0) {
-    ignoreStack.pop()
-  }
+  ignoreStack.pop()
 
   return fileTree
 }
@@ -76,4 +80,61 @@ const countFiles = (fileTree) => {
   return count
 }
 
-export { getFiles, countFiles }
+/**
+ * Recursively counts files and sizes by type in the given file structure.
+ * @param {Object} fileTree - Object representing the file structure.
+ * @returns {Object} - An object containing file counts, file sizes, and total size.
+ */
+const countFilesByType = (fileTree) => {
+  const fileCounts = {}
+  const fileSizes = {}
+  let totalSize = 0
+
+  const countFiles = (fileTree) => {
+    Object.keys(fileTree).forEach(key => {
+      if (typeof fileTree[key].path === 'string') {
+        const ext = path.extname(fileTree[key].path)
+        const size = parseFloat(fileTree[key].size)
+
+        if (!fileCounts[ext]) {
+          fileCounts[ext] = 0
+          fileSizes[ext] = 0
+        }
+
+        fileCounts[ext] += 1
+        fileSizes[ext] += size
+        totalSize += size
+      } else {
+        countFiles(fileTree[key])
+      }
+    })
+  }
+
+  countFiles(fileTree)
+  return { fileCounts, fileSizes, totalSize }
+}
+
+/**
+ * Collects all files with their sizes from the given file structure.
+ * @param {Object} fileTree - Object representing the file structure.
+ * @returns {Array} - An array of objects containing file paths and sizes.
+ */
+const collectFiles = (fileTree) => {
+  const allFiles = []
+  const collect = (fileTree) => {
+    Object.keys(fileTree).forEach(key => {
+      if (typeof fileTree[key].path === 'string') {
+        allFiles.push({
+          path: fileTree[key].path,
+          size: parseFloat(fileTree[key].size)
+        })
+      } else {
+        collect(fileTree[key])
+      }
+    })
+  }
+  collect(fileTree)
+  return allFiles
+}
+
+export { getFiles, countFiles, countFilesByType, collectFiles }

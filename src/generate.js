@@ -1,4 +1,4 @@
-import { getFiles, countFiles } from './utils/files.js'
+import { getFiles, collectFiles, countFiles, countFilesByType } from './utils/files.js'
 import { generateTOC } from './utils/toc.js'
 import { addFilesToPDF } from './utils/pdf.js'
 import { addTitlePage } from './utils/title.js'
@@ -29,8 +29,17 @@ const generate = (projectPath, outputPath, gitignoreFileName = '.gitignore') => 
   const startTime = Date.now()
   let currentCount = 0
 
+  // Calculate file counts and sizes by type
+  const { fileCounts, fileSizes, totalSize } = countFilesByType(fileTree)
+
+  // Collect all files with their sizes
+  const allFiles = collectFiles(fileTree)
+
+  // Sort all files by size and get the top 10 heaviest
+  const heaviestFiles = allFiles.sort((a, b) => b.size - a.size).slice(0, 10)
+
   // Add title page
-  addTitlePage(doc, projectName, projectDescription)
+  addTitlePage(doc, projectName, projectDescription, new Date(startTime), fileCounts, fileSizes, totalSize, heaviestFiles)
 
   // Generate Table of Contents
   doc.fontSize(20).text('Table of Contents', { underline: true })

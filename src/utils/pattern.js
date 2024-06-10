@@ -2,13 +2,13 @@ import fs from 'fs'
 import path from 'path'
 
 /**
- * Reads and returns the patterns from a specified .gitignore file in the directory.
+ * Reads and returns the patterns from a .gitignore file in the specified directory.
  *
  * @param {string} dir - The directory to look for the .gitignore file.
  * @param {string} gitignoreFileName - The name of the .gitignore file to use.
  * @returns {string[]} An array of patterns found in the .gitignore file.
  */
-const getGitignorePatterns = (dir, gitignoreFileName) => {
+const getGitignorePatterns = (dir, gitignoreFileName = '.gitignore') => {
   const gitignorePath = path.join(dir, gitignoreFileName)
   if (!fs.existsSync(gitignorePath)) {
     return []

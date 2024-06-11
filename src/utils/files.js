@@ -1,63 +1,83 @@
 import fs from 'fs'
 import path from 'path'
 import ignore from 'ignore'
-import { getGitignorePatterns } from './pattern.js'
 
 /**
- * Recursively retrieves files and directories while respecting .gitignore patterns.
- * @param {string} dir - Directory to process.
- * @param {Object} fileTree - Object to store file structure.
- * @param {string} rootDir - Root directory for relative paths.
- * @param {string} gitignoreFileName - The name of the .gitignore file to use.
- * @param {Array} ignoreStack - Stack to maintain ignore instances for directory levels.
- * @param {Set} processedDirs - Set to track processed directories.
- * @returns {Object} - Object representing the file structure.
+ * Checks if a file or directory should be ignored based on the ignore rules.
+ * @param {string} filePath - The path of the file or directory to check.
+ * @param {Object[]} ignoreRules - The ignore rules to apply.
+ * @param {Object} ignoreRules[].ignore - The Ignore instance containing the ignore patterns.
+ * @param {string} ignoreRules[].gitignorePath - The path of the corresponding .gitignore file.
+ * @returns {boolean} - Returns true if the file or directory should be ignored, false otherwise.
  */
-const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitignore', ignoreStack = [], processedDirs = new Set()) => {
-  if (ignoreStack.length === 0) {
-    // Initialize the ignore stack with patterns from the root directory
-    const rootGitignorePatterns = getGitignorePatterns(rootDir, gitignoreFileName)
-    ignoreStack.push(ignore().add(rootGitignorePatterns).add('.*')) // Ignore dot files and folders
+const shouldIgnore = (filePath, ignoreRules) => {
+  for (const { ignore, gitignorePath } of ignoreRules) {
+    const relativeToGitignore = path.relative(path.dirname(gitignorePath), filePath)
+    if (ignore.ignores(relativeToGitignore)) {
+      return true
+    }
   }
+  return false
+}
 
+/**
+ * Recursively processes a directory and builds the file tree.
+ * @param {string} dir - The directory to process.
+ * @param {Object} fileTree - The object representing the file tree.
+ * @param {string} rootDir - The root directory of the project.
+ * @param {string} gitignoreFileName - The name of the .gitignore file.
+ * @param {Object[]} ignoreRules - The ignore rules to apply.
+ * @param {Set} processedDirs - The set of already processed directories.
+ * @returns {void}
+ */
+const processDirectory = (dir, fileTree, rootDir, gitignoreFileName, ignoreRules, processedDirs) => {
   if (processedDirs.has(dir)) {
-    return fileTree
+    return
   }
   processedDirs.add(dir)
 
-  const currentIgnore = ignoreStack[ignoreStack.length - 1]
-
-  // Load .gitignore patterns from the current directory and add them to the current ignore instance
-  const gitignorePatterns = getGitignorePatterns(dir, gitignoreFileName)
-  if (gitignorePatterns.length > 0) {
-    const newIgnore = ignore().add(currentIgnore._rules).add(gitignorePatterns)
-    ignoreStack.push(newIgnore)
-  } else {
-    ignoreStack.push(currentIgnore)
+  const gitignorePath = path.join(dir, gitignoreFileName)
+  if (fs.existsSync(gitignorePath)) {
+    const gitignorePatterns = fs.readFileSync(gitignorePath, 'utf8').split('\n').filter(Boolean)
+    const currentIgnoreRule = { ignore: ignore().add(gitignorePatterns), gitignorePath }
+    ignoreRules = [...ignoreRules, currentIgnoreRule]
   }
 
   const files = fs.readdirSync(dir)
-
   files.forEach(file => {
     const filePath = path.join(dir, file)
-    const relativePath = path.relative(rootDir, filePath)
 
-    if (currentIgnore.ignores(relativePath)) {
+    if (shouldIgnore(filePath, ignoreRules)) {
       return
     }
 
     if (fs.statSync(filePath).isDirectory()) {
       fileTree[file] = {}
-      getFiles(filePath, fileTree[file], rootDir, gitignoreFileName, ignoreStack, processedDirs)
-    } else {
+      processDirectory(filePath, fileTree[file], rootDir, gitignoreFileName, ignoreRules, processedDirs)
+      if (Object.keys(fileTree[file]).length === 0) {
+        delete fileTree[file]
+      }
+    } else if (file !== gitignoreFileName) {
+      const relativePath = path.relative(rootDir, filePath)
       const fileSizeInBytes = fs.statSync(filePath).size
       const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2)
       fileTree[file] = { path: relativePath, size: fileSizeInKB }
     }
   })
+}
 
-  ignoreStack.pop()
-
+/**
+ * Builds the file tree by excluding files and directories specified in the .gitignore files.
+ * @param {string} dir - The directory from which to build the file tree.
+ * @param {Object} [fileTree={}] - The object representing the file tree.
+ * @param {string} [rootDir=dir] - The root directory of the project.
+ * @param {string} [gitignoreFileName='.gitignore'] - The name of the .gitignore file.
+ * @param {Object[]} [ignoreRules=[]] - The ignore rules to apply.
+ * @param {Set} [processedDirs=new Set()] - The set of already processed directories.
+ * @returns {Object} - The file tree object.
+ */
+const getFiles = (dir, fileTree = {}, rootDir = dir, gitignoreFileName = '.gitignore', ignoreRules = [], processedDirs = new Set()) => {
+  processDirectory(dir, fileTree, rootDir, gitignoreFileName, ignoreRules, processedDirs)
   return fileTree
 }
 

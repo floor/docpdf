@@ -1,7 +1,7 @@
 {
   "name": "docpdf",
-  "version": "1.0.1",
-  "description": "A simple solution for generating PDF documentation for a given project.",
+  "version": "1.0.2",
+  "description": "A simple solution for generating PDF of your node project.",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

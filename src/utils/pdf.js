@@ -3,38 +3,35 @@ import path from 'path'
 import progress from './progress.js'
 
 /**
- * Recursively adds files and directories from the file tree to a PDF document.
- *
- * @param {object} doc - The PDF document instance to add files to.
- * @param {object} fileTree - The hierarchical structure representing files and directories.
- * @param {string} projectPath - The root path of the project containing the files.
+ * Adds files to the PDF document, showing the content of each file.
+ * @param {object} doc - The PDF document instance.
+ * @param {object} fileTree - The file structure object.
+ * @param {string} projectPath - The root path of the project.
  * @param {number} currentCount - The current count of processed files.
- * @param {number} totalCount - The total number of files to be processed.
- * @param {number} startTime - The timestamp when the processing started.
- * @param {string} [numbering=''] - The current numbering prefix for directory entries.
- * @returns {number} The updated count of processed files.
+ * @param {number} totalCount - The total count of files.
+ * @param {number} startTime - The start time of the process.
+ * @param {string} font - The font to use for the file content.
+ * @param {string} numbering - The current numbering prefix.
+ * @returns {number} - The updated count of processed files.
  */
-const addFilesToPDF = (doc, fileTree, projectPath, currentCount, totalCount, startTime, numbering = '') => {
+const addFilesToPDF = (doc, fileTree, projectPath, currentCount, totalCount, startTime, font = 'Helvetica', numbering = '') => {
   let index = 1
-
   Object.keys(fileTree).forEach(key => {
-    if (typeof fileTree[key] === 'object' && !fileTree[key].path) {
-      // It's a directory
+    if (typeof fileTree[key] === 'object' && !fileTree[key].path) { // It's a directory
       const currentNumbering = numbering ? `${numbering}.${index}` : `${index}`
       doc.fontSize(14).text(`${currentNumbering} ${key}/`, { destination: `${currentNumbering} ${key}/` })
-      currentCount = addFilesToPDF(doc, fileTree[key], projectPath, currentCount, totalCount, startTime, currentNumbering)
+      currentCount = addFilesToPDF(doc, fileTree[key], projectPath, currentCount, totalCount, startTime, font, currentNumbering)
       index++
-    } else if (fileTree[key].path) {
-      // It's a file
+    } else if (fileTree[key].path) { // It's a file
       const file = path.join(projectPath, fileTree[key].path)
-      if (fs.existsSync(file)) {
+      if (fs.existsSync(file)) { // Check if file exists
         if (file.endsWith('.js')) {
           doc.addPage()
           doc.fontSize(16).text(fileTree[key].path, { destination: fileTree[key].path })
 
           try {
             const fileContent = fs.readFileSync(file, 'utf-8')
-            doc.fontSize(10).text(fileContent)
+            doc.font(font).fontSize(10).text(fileContent)
           } catch (err) {
             console.error(`Error reading file ${file}:`, err)
           }
@@ -47,7 +44,6 @@ const addFilesToPDF = (doc, fileTree, projectPath, currentCount, totalCount, sta
       }
     }
   })
-
   return currentCount
 }
 

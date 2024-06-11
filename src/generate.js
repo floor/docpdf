@@ -1,4 +1,4 @@
-import { getFiles, collectFiles, countFiles, countFilesByType } from './utils/files.js'
+import { getFiles, countFiles, countFilesByType, collectFiles } from './utils/files.js'
 import { generateTOC } from './utils/toc.js'
 import { addFilesToPDF } from './utils/pdf.js'
 import { addTitlePage } from './utils/title.js'
@@ -6,6 +6,10 @@ import PDFDocument from 'pdfkit'
 import progress from './utils/progress.js'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 /**
  * Generates a PDF document for a project, including a title page, table of contents, and file contents.
@@ -25,6 +29,9 @@ const generate = (projectPath, outputPath, gitignoreFileName = '.gitignore') => 
 
   const doc = new PDFDocument()
   doc.pipe(fs.createWriteStream(outputPath))
+
+  // Register the custom font
+  doc.registerFont('Courier', path.join(__dirname, 'fonts', 'DejaVuSans.ttf'))
 
   const startTime = Date.now()
   let currentCount = 0
@@ -47,8 +54,8 @@ const generate = (projectPath, outputPath, gitignoreFileName = '.gitignore') => 
 
   doc.addPage()
 
-  // Add files to PDF
-  currentCount = addFilesToPDF(doc, fileTree, projectPath, currentCount, totalCount, startTime)
+  // Add files to PDF with custom font
+  currentCount = addFilesToPDF(doc, fileTree, projectPath, currentCount, totalCount, startTime, 'Courier')
 
   doc.end()
 
